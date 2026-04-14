@@ -32,6 +32,8 @@
 
   html, body {
     margin: 0;
+    width: 100%;
+    height: 100%;
     min-height: 100%;
     background:
       radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.10), transparent 28%),
@@ -45,9 +47,20 @@
 
   body {
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 10px;
     padding: calc(10px + var(--safe-top)) 10px calc(10px + var(--safe-bottom));
+  }
+
+
+  @supports not (height: 100dvh) {
+    body {
+      height: 100vh;
+      min-height: 100vh;
+    }
   }
 
   .topbar,
@@ -113,6 +126,7 @@
 
   .viewport {
     position: relative;
+    min-height: 220px;
     overflow: hidden;
     border-radius: 22px;
     border: 1px solid rgba(255,255,255,0.10);
