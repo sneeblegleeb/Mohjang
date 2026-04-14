@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mohjang</title>
+<style>
+  :root {
+    --bg1: #0f172a;
+    --bg2: #111827;
+    --panel: rgba(15, 23, 42, 0.78);
+    --panel-border: rgba(255, 255, 255, 0.12);
+    --text: #eef2ff;
+    --muted: #b6c0d4;
+    --accent: #60a5fa;
+    --accent-2: #22d3ee;
+    --good: #34d399;
+    --warn: #f59e0b;
+    --danger: #fb7185;
+    --tile-top: #f8fafc;
+    --tile-bottom: #dbe4f0;
+    --tile-side: #b7c4d6;
+    --tile-edge: #90a1b5;
+    --tile-face: #0f172a;
+    --shadow: rgba(2, 8, 23, 0.45);
+    --glow: rgba(96, 165, 250, 0.5);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.10), transparent 28%),
+      radial-gradient(circle at 80% 10%, rgba(96, 165, 250, 0.12), transparent 24%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+    color: var(--text);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  body {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    padding: calc(10px + var(--safe-top)) 10px calc(10px + var(--safe-bottom));
+  }
+
+  .topbar,
+  .bottombar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    padding: 12px 14px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: clamp(1.25rem, 2.6vw, 1.65rem);
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .brand .sub {
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .stat {
+    min-width: 92px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .stat .label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .stat .value {
+    margin-top: 2px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+      radial-gradient(circle at 50% 20%, rgba(34, 211, 238, 0.08), transparent 35%),
+      linear-gradient(180deg, rgba(255,255,255,0.015), rgba(0,0,0,0.15));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 20px 40px rgba(0,0,0,0.22);
+    touch-action: none;
+    user-select: none;
+  }
+
+  .board {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: -80px;
+    border-radius: 40px;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045), rgba(255,255,255,0) 60%),
+      linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+    pointer-events: none;
+  }
+
+  .tile {
+    position: absolute;
+    width: 88px;
+    height: 112px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    transform-origin: center center;
+  }
+
+  .tile .shape {
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--tile-top), var(--tile-bottom));
+    border: 2px solid var(--tile-edge);
+    box-shadow:
+      0 10px 18px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,0.95);
+    overflow: hidden;
+  }
+
+  .tile .shape::before {
+    content: "";
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 12px;
+    top: 8px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.16));
+    border-left: 2px solid rgba(0,0,0,0.12);
+  }
+
+  .tile .shape::after {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    bottom: 8px;
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.72));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
+  }
+
+  .tile .side {
+    position: absolute;
+    left: 6px;
+    right: 18px;
+    bottom: -8px;
+    height: 10px;
+    background: linear-gradient(180deg, var(--tile-side), #94a4b8);
+    border-left: 2px solid var(--tile-edge);
+    border-right: 2px solid var(--tile-edge);
+    border-bottom: 2px solid var(--tile-edge);
+    border-radius: 0 0 10px 10px;
+    filter: brightness(0.98);
+    pointer-events: none;
+  }
+
+  .tile .face {
+    position: absolute;
+    left: 12px;
+    right: 18px;
+    top: 12px;
+    bottom: 16px;
+    display: grid;
+    place-items: center;
+    z-index: 1;
+    color: var(--tile-face);
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: 0.02em;
+  }
+
+  .tile .corner {
+    position: absolute;
+    z-index: 1;
+    font-size: 0.78rem;
+    color: rgba(15, 23, 42, 0.55);
+    font-weight: 700;
+  }
+
+  .tile .corner.tl { left: 16px; top: 14px; }
+  .tile .corner.br { right: 22px; bottom: 18px; transform: rotate(180deg); }
+
+  .tile.free .shape::after {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.98),
+      0 0 0 1px rgba(96, 165, 250, 0.12);
+  }
+
+  .tile.blocked {
+    filter: saturate(0.78) brightness(0.93);
+  }
+
+  .tile.blocked .face,
+  .tile.blocked .corner {
+    opacity: 0.7;
+  }
+
+  .tile.selected {
+    transform: translateY(-4px) scale(1.02);
+  }
+
+  .tile.selected .shape,
+  .tile.hint .shape {
+    box-shadow:
+      0 14px 24px rgba(2, 8, 23, 0.50),
+      0 0 0 4px var(--glow),
+      inset 0 1px 0 rgba(255,255,255,0.98);
+    border-color: #60a5fa;
+  }
+
+  .tile.hint {
+    animation: pulse 1s ease-in-out infinite alternate;
+  }
+
+  .tile.removed {
+    animation: popOut 180ms ease forwards;
+    pointer-events: none;
+  }
+
+  @keyframes pulse {
+    from { transform: translateY(-3px) scale(1.01); }
+    to { transform: translateY(-6px) scale(1.035); }
+  }
+
+  @keyframes popOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: translateY(-12px) scale(0.92); }
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  button.ctrl {
+    appearance: none;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    min-height: 46px;
+  }
+
+  button.ctrl:hover,
+  button.ctrl:focus-visible {
+    background: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.18);
+    outline: none;
+  }
+
+  button.ctrl:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  button.ctrl.primary {
+    background: linear-gradient(180deg, rgba(96,165,250,0.28), rgba(34,211,238,0.18));
+    border-color: rgba(96,165,250,0.4);
+  }
+
+  .statusline {
+    flex: 1 1 220px;
+    min-height: 1.2em;
+    color: var(--muted);
+    font-size: 0.96rem;
+    padding-right: 4px;
+  }
+
+  .statusline.good { color: #a7f3d0; }
+  .statusline.warn { color: #fde68a; }
+  .statusline.bad { color: #fecdd3; }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(2, 8, 23, 0.52);
+    backdrop-filter: blur(6px);
+    z-index: 50;
+    padding: 16px;
+  }
+
+  .overlay.show { display: grid; }
+
+  .modal {
+    width: min(520px, 100%);
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 22px;
+    padding: 24px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.34);
+  }
+
+  .modal h2 {
+    margin: 0 0 8px;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+  }
+
+  .modal p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .modal .actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .legend {
+    font-size: 0.88rem;
+    color: var(--muted);
+    opacity: 0.9;
+  }
+
+  @media (max-width: 760px) {
+    body {
+      gap: 8px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .topbar,
+    .bottombar {
+      border-radius: 16px;
+      padding: 10px 12px;
+    }
+
+    .stats {
+      width: 100%;
+      justify-content: stretch;
+    }
+
+    .stat {
+      flex: 1 1 92px;
+      min-width: 0;
+    }
+
+    .controls {
+      width: 100%;
+    }
+
+    button.ctrl {
+      flex: 1 1 calc(33.333% - 8px);
+      min-width: 88px;
+    }
+
+    .statusline {
+      width: 100%;
+      order: -1;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <h1>Mohjang</h1>
+      <div class="sub">Match free tiles. Clear the stack.</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="label">Tiles Left</div><div class="value" id="tilesLeft">64</div></div>
+      <div class="stat"><div class="label">Moves</div><div class="value" id="movesCount">0</div></div>
+      <div class="stat"><div class="label">Time</div><div class="value" id="timeCount">00:00</div></div>
+    </div>
+  </div>
+
+  <div class="viewport" id="viewport" aria-label="Mohjang board area">
+    <div class="board" id="board"></div>
+    <div class="overlay" id="overlay">
+      <div class="modal">
+        <h2 id="overlayTitle">You win!</h2>
+        <p id="overlayText">Every tile is gone. That stack never stood a chance.</p>
+        <div class="actions">
+          <button class="ctrl primary" id="playAgainBtn">New Game</button>
+          <button class="ctrl" id="closeOverlayBtn">Keep Looking</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottombar">
+    <div class="statusline" id="statusLine">Tap or click a free tile to select it. Match it with another free tile showing the same face.</div>
+    <div class="controls">
+      <button class="ctrl primary" id="newBtn">New</button>
+      <button class="ctrl" id="undoBtn">Undo</button>
+      <button class="ctrl" id="hintBtn">Hint</button>
+      <button class="ctrl" id="shuffleBtn">Shuffle</button>
+      <button class="ctrl" id="fitBtn">Fit</button>
+      <button class="ctrl" id="zoomOutBtn">−</button>
+      <button class="ctrl" id="zoomInBtn">+</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'mohjang-save-v1';
+  const TILE_W = 88;
+  const TILE_H = 112;
+  const GRID_X = 48;
+  const GRID_Y = 56;
+  const STACK_X = 10;
+  const STACK_Y = 10;
+  const MIN_SCALE = 0.28;
+  const MAX_SCALE = 1.8;
+  const FACE_POOL = ['A','B','C','D','E','F','G','H','J','K','L','M','1','2','3','4'];
+
+  const viewport = document.getElementById('viewport');
+  const boardEl = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayText = document.getElementById('overlayText');
+  const statusLine = document.getElementById('statusLine');
+  const tilesLeftEl = document.getElementById('tilesLeft');
+  const movesCountEl = document.getElementById('movesCount');
+  const timeCountEl = document.getElementById('timeCount');
+
+  const layout = buildLayout();
+  const positionsById = new Map(layout.map(pos => [pos.id, pos]));
+  const boardBounds = computeBoardBounds(layout);
+
+  let state = null;
+  let hintIds = [];
+  let timerHandle = null;
+  let lastTick = performance.now();
+  let drag = null;
+  let activePointers = new Map();
+  let pinch = null;
+
+  function buildLayout() {
+    const specs = [
+      { z: 0, rows: [6, 8, 8, 8, 6] },
+      { z: 1, rows: [4, 6, 6, 4] },
+      { z: 2, rows: [2, 4, 2] }
+    ];
+
+    const positions = [];
+    let id = 0;
+
+    for (const spec of specs) {
+      const rowCount = spec.rows.length;
+      const yStart = -(rowCount - 1);
+      for (let r = 0; r < rowCount; r++) {
+        const width = spec.rows[r];
+        const y = yStart + r * 2;
+        const xStart = -(width - 1);
+        for (let c = 0; c < width; c++) {
+          const x = xStart + c * 2;
+          positions.push({ id: id++, x, y, z: spec.z });
+        }
+      }
+    }
+
+    for (const pos of positions) {
+      pos.left = [];
+      pos.right = [];
+      pos.above = [];
+    }
+
+    for (let i = 0; i < positions.length; i++) {
+      const a = positions[i];
+      for (let j = 0; j < positions.length; j++) {
+        if (i === j) continue;
+        const b = positions[j];
+        if (a.z === b.z && a.y === b.y) {
+          if (b.x === a.x - 2) a.left.push(b.id);
+          if (b.x === a.x + 2) a.right.push(b.id);
+        }
+        if (b.z > a.z) {
+          const dx = Math.abs(a.x - b.x);
+          const dy = Math.abs(a.y - b.y);
+          if (dx <= 1 && dy <= 1) a.above.push(b.id);
+        }
+      }
+    }
+
+    return positions;
+  }
+
+  function computeBoardBounds(positions) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const pos of positions) {
+      const left = pos.x * GRID_X + pos.z * STACK_X;
+      const top = pos.y * GRID_Y - pos.z * STACK_Y;
+      minX = Math.min(minX, left);
+      minY = Math.min(minY, top);
+      maxX = Math.max(maxX, left + TILE_W + 18);
+      maxY = Math.max(maxY, top + TILE_H + 12);
+    }
+
+    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+  }
+
+  function makeFreshState() {
+    const activeIds = layout.map(p => p.id);
+    const faces = makeSolvableFaces(activeIds);
+    return {
+      version: 1,
+      tiles: layout.map(pos => ({
+        id: pos.id,
+        face: faces[pos.id],
+        active: true
+      })),
+      selectedId: null,
+      moveHistory: [],
+      moves: 0,
+      elapsedMs: 0,
+      startedAt: Date.now(),
+      panX: 0,
+      panY: 0,
+      scale: 1,
+      fittedOnce: false,
+      gameOver: false,
+      won: false
+    };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.version !== 1) return null;
+      if (!Array.isArray(parsed.tiles) || parsed.tiles.length !== layout.length) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // ignore storage failures
+    }
+  }
+
+  function startNewGame() {
+    hintIds = [];
+    state = makeFreshState();
+    fitBoard();
+    render();
+    setStatus('New game ready. Clear the whole stack.', 'good');
+    closeOverlay();
+    saveState();
+  }
+
+  function tileMap() {
+    return new Map(state.tiles.map(tile => [tile.id, tile]));
+  }
+
+  function activeSet() {
+    return new Set(state.tiles.filter(t => t.active).map(t => t.id));
+  }
+
+  function isFree(id, occSet = activeSet()) {
+    const pos = positionsById.get(id);
+    const topBlocked = pos.above.some(otherId => occSet.has(otherId));
+    if (topBlocked) return false;
+    const leftBlocked = pos.left.some(otherId => occSet.has(otherId));
+    const rightBlocked = pos.right.some(otherId => occSet.has(otherId));
+    return !(leftBlocked && rightBlocked);
+  }
+
+  function freeIds(occSet = activeSet()) {
+    const result = [];
+    for (const id of occSet) {
+      if (isFree(id, occSet)) result.push(id);
+    }
+    return result;
+  }
+
+  function makeSolvableFaces(activeIds) {
+    const ids = [...activeIds];
+    if (ids.length % 2 !== 0) {
+      throw new Error('Tile count must be even to generate pairs.');
+    }
+
+    const pairCount = ids.length / 2;
+    const pairSymbols = [];
+    for (let i = 0; i < pairCount; i++) {
+      pairSymbols.push(FACE_POOL[i % FACE_POOL.length]);
+    }
+
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const symbols = shuffle(pairSymbols.slice());
+      const occ = new Set(ids);
+      const faces = {};
+      let ok = true;
+
+      for (let pairIndex = 0; pairIndex < symbols.length; pairIndex++) {
+        const frees = freeIds(occ);
+        if (frees.length < 2) {
+          ok = false;
+          break;
+        }
+
+        const first = sample(frees);
+        const secondCandidates = frees.filter(id => id !== first);
+        if (!secondCandidates.length) {
+          ok = false;
+          break;
+        }
+        const second = sample(secondCandidates);
+        const sym = symbols[pairIndex];
+        faces[first] = sym;
+        faces[second] = sym;
+        occ.delete(first);
+        occ.delete(second);
+      }
+
+      if (ok && Object.keys(faces).length === ids.length) {
+        return faces;
+      }
+    }
+
+    throw new Error('Unable to generate a solvable Mohjang layout.');
+  }
+
+  function sample(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function render() {
+    const occ = activeSet();
+    const freeSet = new Set(freeIds(occ));
+    const selectedId = state.selectedId;
+    const hintSet = new Set(hintIds);
+
+    boardEl.innerHTML = '';
+
+    const tilesInDrawOrder = state.tiles
+      .filter(tile => tile.active)
+      .sort((a, b) => {
+        const pa = positionsById.get(a.id);
+        const pb = positionsById.get(b.id);
+        if (pa.z !== pb.z) return pa.z - pb.z;
+        if (pa.y !== pb.y) return pa.y - pb.y;
+        return pa.x - pb.x;
+      });
+
+    for (const tile of tilesInDrawOrder) {
+      const pos = positionsById.get(tile.id);
+      const left = pos.x * GRID_X - boardBounds.minX + pos.z * STACK_X;
+      const top = pos.y * GRID_Y - boardBounds.minY - pos.z * STACK_Y;
+      const btn = document.createElement('button');
+      btn.className = 'tile';
+      if (freeSet.has(tile.id)) btn.classList.add('free');
+      else btn.classList.add('blocked');
+      if (selectedId === tile.id) btn.classList.add('selected');
+      if (hintSet.has(tile.id)) btn.classList.add('hint');
+      btn.style.left = `${left}px`;
+      btn.style.top = `${top}px`;
+      btn.style.zIndex = String(10 + pos.z * 100 + Math.round((pos.y + 10) * 2 + (pos.x + 10)));
+      btn.dataset.id = String(tile.id);
+      btn.setAttribute('aria-label', `Tile ${tile.face}${freeSet.has(tile.id) ? ', free' : ', blocked'}`);
+      btn.innerHTML = `
+        <span class="side"></span>
+        <span class="shape"></span>
+        <span class="face">${tile.face}</span>
+        <span class="corner tl">${tile.face}</span>
+        <span class="corner br">${tile.face}</span>
+      `;
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        onTileClick(tile.id);
+      });
+      boardEl.appendChild(btn);
+    }
+
+    boardEl.style.width = `${boardBounds.width}px`;
+    boardEl.style.height = `${boardBounds.height}px`;
+    applyTransform();
+    updateHud();
+  }
+
+  function updateHud() {
+    const left = state.tiles.filter(tile => tile.active).length;
+    tilesLeftEl.textContent = String(left);
+    movesCountEl.textContent = String(state.moves);
+    timeCountEl.textContent = formatTime(state.elapsedMs);
+  }
+
+  function formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const secs = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  }
+
+  function setStatus(text, tone = '') {
+    statusLine.textContent = text;
+    statusLine.className = 'statusline';
+    if (tone) statusLine.classList.add(tone);
+  }
+
+  function onTileClick(id) {
+    if (state.gameOver) return;
+    clearHints();
+
+    if (!isFree(id)) {
+      state.selectedId = null;
+      render();
+      setStatus('That tile is blocked. Pick one with an open side and nothing on top.', 'warn');
+      saveState();
+      return;
+    }
+
+    if (state.selectedId === id) {
+      state.selectedId = null;
+      render();
+      setStatus('Selection cleared.', '');
+      saveState();
+      return;
+    }
+
+    if (state.selectedId == null) {
+      state.selectedId = id;
+      render();
+      setStatus('Now pick the matching free tile.', '');
+      saveState();
+      return;
+    }
+
+    const currentMap = tileMap();
+    const first = currentMap.get(state.selectedId);
+    const second = currentMap.get(id);
+
+    if (!first || !second) {
+      state.selectedId = null;
+      render();
+      saveState();
+      return;
+    }
+
+    if (first.face !== second.face) {
+      state.selectedId = id;
+      render();
+      setStatus('Not a match. Try the same face.', 'warn');
+      saveState();
+      return;
+    }
+
+    removePair(first.id, second.id);
+  }
+
+  function removePair(idA, idB) {
+    const ids = [idA, idB];
+    const tiles = tileMap();
+    const faces = ids.map(id => tiles.get(id)?.face ?? '?');
+    state.moveHistory.push({ ids: ids.slice(), faces: faces.slice() });
+
+    for (const id of ids) {
+      const tile = state.tiles.find(t => t.id === id);
+      if (tile) tile.active = false;
+    }
+
+    state.moves += 1;
+    state.selectedId = null;
+    render();
+    setStatus(`Matched ${faces[0]} tiles.`, 'good');
+
+    const remaining = state.tiles.filter(t => t.active).length;
+    if (remaining === 0) {
+      state.gameOver = true;
+      state.won = true;
+      showOverlay('You win!', `Board cleared in ${formatTime(state.elapsedMs)} with ${state.moves} moves.`);
+      setStatus('Board cleared. Beautiful work.', 'good');
+    } else {
+      const pair = findHintPair();
+      if (!pair) {
+        setStatus('No matches are currently available. Shuffle the remaining tiles.', 'bad');
+      }
+    }
+
+    saveState();
+  }
+
+  function undoMove() {
+    clearHints();
+    if (!state.moveHistory.length || state.won) {
+      setStatus('Nothing to undo.', 'warn');
+      return;
+    }
+
+    const last = state.moveHistory.pop();
+    for (let i = 0; i < last.ids.length; i++) {
+      const tile = state.tiles.find(t => t.id === last.ids[i]);
+      if (tile) {
+        tile.active = true;
+        tile.face = last.faces[i];
+      }
+    }
+
+    state.moves = Math.max(0, state.moves - 1);
+    state.selectedId = null;
+    state.gameOver = false;
+    state.won = false;
+    closeOverlay();
+    render();
+    setStatus('Last move restored.', '');
+    saveState();
+  }
+
+  function clearHints() {
+    hintIds = [];
+  }
+
+  function findHintPair() {
+    const occ = activeSet();
+    const frees = freeIds(occ);
+    const byFace = new Map();
+    for (const id of frees) {
+      const tile = state.tiles.find(t => t.id === id);
+      if (!tile) continue;
+      if (!byFace.has(tile.face)) byFace.set(tile.face, []);
+      byFace.get(tile.face).push(id);
+    }
+
+    for (const [, ids] of byFace) {
+      if (ids.length >= 2) return [ids[0], ids[1]];
+    }
+    return null;
+  }
+
+  function showHint() {
+    if (state.gameOver) return;
+    const pair = findHintPair();
+    if (!pair) {
+      clearHints();
+      render();
+      setStatus('No free matching pair right now. Shuffle should reopen the board.', 'bad');
+      return;
+    }
+    hintIds = pair;
+    state.selectedId = pair[0];
+    render();
+    setStatus('Highlighted a free matching pair.', 'good');
+    saveState();
+  }
+
+  function shuffleRemaining() {
+    if (state.gameOver) return;
+    clearHints();
+    const ids = state.tiles.filter(t => t.active).map(t => t.id);
+    if (ids.length < 2) return;
+
+    const faces = makeSolvableFaces(ids);
+    for (const tile of state.tiles) {
+      if (tile.active) tile.face = faces[tile.id];
+    }
+    state.selectedId = null;
+    state.moveHistory = [];
+    render();
+    setStatus('Remaining tiles were rebuilt into a solvable layout. Undo history was cleared.', 'good');
+    saveState();
+  }
+
+  function fitBoard() {
+    const rect = viewport.getBoundingClientRect();
+    const margin = 24;
+    const scale = clamp(
+      Math.min((rect.width - margin) / boardBounds.width, (rect.height - margin) / boardBounds.height),
+      MIN_SCALE,
+      1.2
+    );
+    state.scale = scale;
+    state.panX = Math.round((rect.width - boardBounds.width * scale) / 2);
+    state.panY = Math.round((rect.height - boardBounds.height * scale) / 2);
+    state.fittedOnce = true;
+    applyTransform();
+    saveState();
+  }
+
+  function applyTransform() {
+    if (!state) return;
+    boardEl.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function zoomBy(factor, clientX = null, clientY = null) {
+    const rect = viewport.getBoundingClientRect();
+    const oldScale = state.scale;
+    const newScale = clamp(oldScale * factor, MIN_SCALE, MAX_SCALE);
+    if (newScale === oldScale) return;
+
+    const anchorX = clientX ?? rect.left + rect.width / 2;
+    const anchorY = clientY ?? rect.top + rect.height / 2;
+    const localX = (anchorX - rect.left - state.panX) / oldScale;
+    const localY = (anchorY - rect.top - state.panY) / oldScale;
+
+    state.scale = newScale;
+    state.panX = anchorX - rect.left - localX * newScale;
+    state.panY = anchorY - rect.top - localY * newScale;
+    applyTransform();
+    saveState();
+  }
+
+  function beginTimer() {
+    if (timerHandle) clearInterval(timerHandle);
+    lastTick = performance.now();
+    timerHandle = setInterval(() => {
+      const now = performance.now();
+      const delta = now - lastTick;
+      lastTick = now;
+      if (state && !state.gameOver) {
+        state.elapsedMs += delta;
+        updateHud();
+      }
+    }, 250);
+  }
+
+  function showOverlay(title, text) {
+    overlayTitle.textContent = title;
+    overlayText.textContent = text;
+    overlay.classList.add('show');
+  }
+
+  function closeOverlay() {
+    overlay.classList.remove('show');
+  }
+
+  function initPointerControls() {
+    viewport.addEventListener('pointerdown', (event) => {
+      viewport.setPointerCapture(event.pointerId);
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 1) {
+        drag = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          panX: state.panX,
+          panY: state.panY,
+          moved: false
+        };
+      } else if (activePointers.size === 2) {
+        const pts = [...activePointers.values()];
+        pinch = {
+          distance: distance(pts[0], pts[1]),
+          center: midpoint(pts[0], pts[1]),
+          startScale: state.scale,
+          startPanX: state.panX,
+          startPanY: state.panY
+        };
+      }
+    });
+
+    viewport.addEventListener('pointermove', (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 2 && pinch) {
+        const pts = [...activePointers.values()];
+        const dist = distance(pts[0], pts[1]);
+        if (pinch.distance > 0) {
+          const factor = dist / pinch.distance;
+          state.scale = clamp(pinch.startScale * factor, MIN_SCALE, MAX_SCALE);
+          const currentCenter = midpoint(pts[0], pts[1]);
+          state.panX = pinch.startPanX + (currentCenter.x - pinch.center.x);
+          state.panY = pinch.startPanY + (currentCenter.y - pinch.center.y);
+          applyTransform();
+        }
+        return;
+      }
+
+      if (drag && drag.pointerId === event.pointerId) {
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) drag.moved = true;
+        state.panX = drag.panX + dx;
+        state.panY = drag.panY + dy;
+        applyTransform();
+      }
+    });
+
+    const finishPointer = (event) => {
+      activePointers.delete(event.pointerId);
+      if (pinch && activePointers.size < 2) pinch = null;
+      if (drag && drag.pointerId === event.pointerId) {
+        if (drag.moved) saveState();
+        drag = null;
+      }
+    };
+
+    viewport.addEventListener('pointerup', finishPointer);
+    viewport.addEventListener('pointercancel', finishPointer);
+    viewport.addEventListener('pointerleave', (event) => {
+      if (event.pointerType === 'mouse' && activePointers.has(event.pointerId)) {
+        finishPointer(event);
+      }
+    });
+
+    viewport.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+      zoomBy(factor, event.clientX, event.clientY);
+    }, { passive: false });
+
+    viewport.addEventListener('dblclick', () => {
+      fitBoard();
+      setStatus('Board fitted to the viewport.', '');
+    });
+  }
+
+  function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function midpoint(a, b) {
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  function wireButtons() {
+    document.getElementById('newBtn').addEventListener('click', startNewGame);
+    document.getElementById('undoBtn').addEventListener('click', undoMove);
+    document.getElementById('hintBtn').addEventListener('click', showHint);
+    document.getElementById('shuffleBtn').addEventListener('click', shuffleRemaining);
+    document.getElementById('fitBtn').addEventListener('click', () => {
+      fitBoard();
+      setStatus('Board fitted to the viewport.', '');
+    });
+    document.getElementById('zoomInBtn').addEventListener('click', () => zoomBy(1.15));
+    document.getElementById('zoomOutBtn').addEventListener('click', () => zoomBy(1 / 1.15));
+    document.getElementById('playAgainBtn').addEventListener('click', startNewGame);
+    document.getElementById('closeOverlayBtn').addEventListener('click', closeOverlay);
+    window.addEventListener('resize', () => {
+      if (!state) return;
+      if (state.fittedOnce) {
+        fitBoard();
+      } else {
+        applyTransform();
+      }
+    });
+  }
+
+  function bootstrap() {
+    state = loadState() || makeFreshState();
+    render();
+    if (!state.fittedOnce) {
+      fitBoard();
+    } else {
+      applyTransform();
+    }
+    beginTimer();
+    initPointerControls();
+    wireButtons();
+    saveState();
+  }
+
+  bootstrap();
+})();
+</script>
+</body>
+</html>
