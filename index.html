@@ -343,6 +343,36 @@
     transform: translateY(1px) scale(0.99);
   }
 
+  button.ctrl:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .choice-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .choice-chip {
+    justify-content: center;
+  }
+
+  .choice-chip.active {
+    background: linear-gradient(180deg, rgba(96,165,250,0.28), rgba(34,211,238,0.18));
+    border-color: rgba(96,165,250,0.4);
+  }
+
+  .choice-label {
+    margin-top: 18px;
+    font-size: 0.84rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
   button.ctrl.primary {
     background: linear-gradient(180deg, rgba(96,165,250,0.28), rgba(34,211,238,0.18));
     border-color: rgba(96,165,250,0.4);
@@ -492,7 +522,8 @@
       order: -1;
     }
 
-    .size-grid {
+    .size-grid,
+    .choice-row {
       grid-template-columns: 1fr;
     }
 
@@ -533,7 +564,16 @@
     <div class="overlay" id="startOverlay">
       <div class="modal">
         <h2>Start a New Game</h2>
-        <p>Pick a board size. Small is quick, Classic is balanced, and Large gives you more room to get yourself into trouble.</p>
+        <p>Pick a board size, then choose how forgiving you want Mohjang to be. Same tile count still means the same total number of matches, but harder modes give you less safety and nastier recoveries.</p>
+
+        <div class="choice-label">Difficulty</div>
+        <div class="choice-row" id="difficultyRow">
+          <button class="ctrl choice-chip" type="button" data-difficulty="easy">Easy</button>
+          <button class="ctrl choice-chip active" type="button" data-difficulty="normal">Normal</button>
+          <button class="ctrl choice-chip" type="button" data-difficulty="hard">Hard</button>
+        </div>
+
+        <div class="choice-label">Board Size</div>
         <div class="size-grid">
           <button class="ctrl size-card" data-size="small">
             <div>
@@ -557,6 +597,7 @@
             <span class="pill">92 tiles</span>
           </button>
         </div>
+        <div class="legend" id="difficultyLegend" style="margin-top:14px">Normal: up to 3 risky shuffles. Undo and hint stay on.</div>
         <div class="actions">
           <button class="ctrl" id="cancelStartOverlayBtn">Cancel</button>
         </div>
@@ -592,7 +633,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'mohjang-save-v2';
+  const STORAGE_KEY = 'mohjang-save-v3';
   const TILE_W = 88;
   const TILE_H = 112;
   const GRID_X = 48;
@@ -631,29 +672,97 @@
 
   const FACE_LOOKUP = new Map(FACE_POOL.map(face => [face.key, face]));
 
+  const DIFFICULTY_PRESETS = {
+    easy: {
+      label: 'Easy',
+      safeShuffle: true,
+      shuffleLimit: null,
+      allowHint: true,
+      allowUndo: true,
+      legend: 'Easy: unlimited safe shuffles. Undo and hint stay on.'
+    },
+    normal: {
+      label: 'Normal',
+      safeShuffle: false,
+      shuffleLimit: 3,
+      allowHint: true,
+      allowUndo: true,
+      legend: 'Normal: up to 3 risky shuffles. Undo and hint stay on.'
+    },
+    hard: {
+      label: 'Hard',
+      safeShuffle: false,
+      shuffleLimit: 1,
+      allowHint: false,
+      allowUndo: false,
+      legend: 'Hard: 1 risky shuffle, no hint button, no undo.'
+    }
+  };
+
   const LAYOUT_PRESETS = {
     small: {
       label: 'Small',
-      specs: [
-        { z: 0, rows: [4, 6, 6, 4] },
-        { z: 1, rows: [2, 4, 2] }
+      variants: [
+        [
+          { z: 0, rows: [6, 6, 6] },
+          { z: 1, rows: [4, 4] },
+          { z: 2, rows: [2] }
+        ],
+        [
+          { z: 0, rows: [8, 8, 8] },
+          { z: 1, rows: [6, 4] },
+          { z: 2, rows: [2] }
+        ],
+        [
+          { z: 0, rows: [6, 8, 8, 6] },
+          { z: 1, rows: [4, 4] }
+        ]
       ]
     },
     classic: {
       label: 'Classic',
-      specs: [
-        { z: 0, rows: [6, 8, 8, 8, 6] },
-        { z: 1, rows: [4, 6, 6, 4] },
-        { z: 2, rows: [2, 4, 2] }
+      variants: [
+        [
+          { z: 0, rows: [8, 8, 8, 8] },
+          { z: 1, rows: [6, 6, 6] },
+          { z: 2, rows: [4, 4] },
+          { z: 3, rows: [2] }
+        ],
+        [
+          { z: 0, rows: [10, 10, 10] },
+          { z: 1, rows: [8, 8] },
+          { z: 2, rows: [6, 6] },
+          { z: 3, rows: [4, 2] }
+        ],
+        [
+          { z: 0, rows: [8, 10, 10, 8] },
+          { z: 1, rows: [6, 8, 6] },
+          { z: 2, rows: [4, 4] }
+        ]
       ]
     },
     large: {
       label: 'Large',
-      specs: [
-        { z: 0, rows: [8, 10, 10, 10, 8] },
-        { z: 1, rows: [6, 8, 8, 6] },
-        { z: 2, rows: [4, 6, 4] },
-        { z: 3, rows: [2, 2] }
+      variants: [
+        [
+          { z: 0, rows: [8, 10, 10, 10, 8] },
+          { z: 1, rows: [6, 8, 8, 6] },
+          { z: 2, rows: [4, 6, 4] },
+          { z: 3, rows: [2, 2] }
+        ],
+        [
+          { z: 0, rows: [12, 12, 12] },
+          { z: 1, rows: [10, 10] },
+          { z: 2, rows: [8, 8] },
+          { z: 3, rows: [6, 6] },
+          { z: 4, rows: [4, 4] }
+        ],
+        [
+          { z: 0, rows: [10, 12, 12, 10] },
+          { z: 1, rows: [8, 10, 8] },
+          { z: 2, rows: [6, 8] },
+          { z: 3, rows: [4, 4] }
+        ]
       ]
     }
   };
@@ -668,7 +777,9 @@
   const tilesLeftEl = document.getElementById('tilesLeft');
   const movesCountEl = document.getElementById('movesCount');
   const timeCountEl = document.getElementById('timeCount');
+  const difficultyLegendEl = document.getElementById('difficultyLegend');
 
+  let selectedDifficulty = 'normal';
   let layout = [];
   let positionsById = new Map();
   let boardBounds = null;
@@ -680,12 +791,14 @@
   let activePointers = new Map();
   let pinch = null;
 
-  function buildLayout(sizeKey) {
+  function buildLayout(sizeKey, variantIndex = 0) {
     const preset = LAYOUT_PRESETS[sizeKey] || LAYOUT_PRESETS.classic;
+    const variants = preset.variants || [];
+    const specs = variants[((variantIndex % variants.length) + variants.length) % variants.length] || variants[0] || [];
     const positions = [];
     let id = 0;
 
-    for (const spec of preset.specs) {
+    for (const spec of specs) {
       const rowCount = spec.rows.length;
       const yStart = -(rowCount - 1);
       for (let r = 0; r < rowCount; r++) {
@@ -725,8 +838,8 @@
     return positions;
   }
 
-  function applyLayout(sizeKey) {
-    layout = buildLayout(sizeKey);
+  function applyLayout(sizeKey, variantIndex = 0) {
+    layout = buildLayout(sizeKey, variantIndex);
     positionsById = new Map(layout.map(pos => [pos.id, pos]));
     boardBounds = computeBoardBounds(layout);
   }
@@ -749,13 +862,17 @@
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
   }
 
-  function makeFreshState(sizeKey = 'classic') {
-    applyLayout(sizeKey);
+  function makeFreshState(sizeKey = 'classic', difficultyKey = selectedDifficulty, variantIndex = null) {
+    const preset = LAYOUT_PRESETS[sizeKey] || LAYOUT_PRESETS.classic;
+    const chosenVariant = variantIndex == null ? Math.floor(Math.random() * preset.variants.length) : variantIndex;
+    applyLayout(sizeKey, chosenVariant);
     const activeIds = layout.map(p => p.id);
     const faces = makeSolvableFaces(activeIds);
     return {
-      version: 2,
+      version: 3,
       boardSize: sizeKey,
+      difficulty: difficultyKey,
+      layoutVariant: chosenVariant,
       tiles: layout.map(pos => ({
         id: pos.id,
         face: faces[pos.id],
@@ -766,6 +883,7 @@
       moves: 0,
       elapsedMs: 0,
       startedAt: Date.now(),
+      shufflesUsed: 0,
       panX: 0,
       panY: 0,
       scale: 1,
@@ -780,9 +898,10 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || parsed.version !== 2) return null;
+      if (!parsed || parsed.version !== 3) return null;
       if (!LAYOUT_PRESETS[parsed.boardSize]) return null;
-      applyLayout(parsed.boardSize);
+      if (!DIFFICULTY_PRESETS[parsed.difficulty]) return null;
+      applyLayout(parsed.boardSize, parsed.layoutVariant || 0);
       if (!Array.isArray(parsed.tiles) || parsed.tiles.length !== layout.length) return null;
       return parsed;
     } catch {
@@ -798,13 +917,74 @@
     }
   }
 
-  function startNewGame(sizeKey = 'classic') {
+  function rulesForDifficulty(difficultyKey = state?.difficulty || selectedDifficulty) {
+    return DIFFICULTY_PRESETS[difficultyKey] || DIFFICULTY_PRESETS.normal;
+  }
+
+  function shufflesRemaining() {
+    const rules = rulesForDifficulty();
+    if (rules.shuffleLimit == null) return Infinity;
+    return Math.max(0, rules.shuffleLimit - (state?.shufflesUsed || 0));
+  }
+
+  function shuffleSummary() {
+    const rules = rulesForDifficulty();
+    if (rules.shuffleLimit == null) return rules.safeShuffle ? '∞ safe shuffles' : '∞ shuffles';
+    const left = shufflesRemaining();
+    return `${left} shuffle${left === 1 ? '' : 's'} left`;
+  }
+
+  function updateDifficultyLegend() {
+    const rules = rulesForDifficulty(selectedDifficulty);
+    if (difficultyLegendEl) difficultyLegendEl.textContent = rules.legend;
+  }
+
+  function refreshControlStates() {
+    const rules = rulesForDifficulty();
+    const undoBtn = document.getElementById('undoBtn');
+    const hintBtn = document.getElementById('hintBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    if (undoBtn) undoBtn.disabled = !rules.allowUndo || !state || !state.moveHistory.length || state.won;
+    if (hintBtn) hintBtn.disabled = !rules.allowHint || !state || state.gameOver;
+    if (shuffleBtn) shuffleBtn.disabled = !state || state.gameOver || shufflesRemaining() <= 0;
+  }
+
+  function updateDifficultySelectionUi() {
+    document.querySelectorAll('[data-difficulty]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.difficulty === selectedDifficulty);
+    });
+    updateDifficultyLegend();
+  }
+
+  function evaluateBoardState() {
+    const remaining = state.tiles.filter(t => t.active).length;
+    if (remaining === 0) return;
+    const pair = findHintPair();
+    if (pair) return;
+
+    const rules = rulesForDifficulty();
+    if (shufflesRemaining() > 0) {
+      const shuffleWord = rules.safeShuffle ? 'safe shuffle' : 'risky shuffle';
+      setStatus(`No matches are open. Use a ${shuffleWord}. ${shuffleSummary()}.`, 'bad');
+      return;
+    }
+
+    state.gameOver = true;
+    state.won = false;
+    showOverlay('No moves left', `${rules.label} ${LAYOUT_PRESETS[state.boardSize].label} board locked up with no shuffles remaining.`);
+    setStatus('No moves left and no shuffles remaining.', 'bad');
+  }
+
+  function startNewGame(sizeKey = 'classic', difficultyKey = selectedDifficulty) {
     hintIds = [];
-    state = makeFreshState(sizeKey);
+    selectedDifficulty = difficultyKey;
+    updateDifficultySelectionUi();
+    state = makeFreshState(sizeKey, difficultyKey);
     render();
     fitBoard();
     render();
-    setStatus(`${LAYOUT_PRESETS[sizeKey].label} board ready. Clear the whole stack.`, 'good');
+    setStatus(`${rulesForDifficulty(difficultyKey).label} ${LAYOUT_PRESETS[sizeKey].label} board ready. ${shuffleSummary()}.`, 'good');
+    refreshControlStates();
     closeOverlay();
     closeStartOverlay();
     saveState();
@@ -954,6 +1134,7 @@
     tilesLeftEl.textContent = String(left);
     movesCountEl.textContent = String(state.moves);
     timeCountEl.textContent = formatTime(state.elapsedMs);
+    refreshControlStates();
   }
 
   function formatTime(ms) {
@@ -1043,10 +1224,7 @@
       showOverlay('You win!', `${LAYOUT_PRESETS[state.boardSize].label} board cleared in ${formatTime(state.elapsedMs)} with ${state.moves} moves.`);
       setStatus('Board cleared. Beautiful work.', 'good');
     } else {
-      const pair = findHintPair();
-      if (!pair) {
-        setStatus('No matches are currently available. Shuffle the remaining tiles.', 'bad');
-      }
+      evaluateBoardState();
     }
 
     saveState();
@@ -1054,6 +1232,11 @@
 
   function undoMove() {
     clearHints();
+    const rules = rulesForDifficulty();
+    if (!rules.allowUndo) {
+      setStatus('Undo is disabled on Hard.', 'warn');
+      return;
+    }
     if (!state.moveHistory.length || state.won) {
       setStatus('Nothing to undo.', 'warn');
       return;
@@ -1075,6 +1258,7 @@
     closeOverlay();
     render();
     setStatus('Last move restored.', '');
+    evaluateBoardState();
     saveState();
   }
 
@@ -1100,12 +1284,17 @@
   }
 
   function showHint() {
+    const rules = rulesForDifficulty();
+    if (!rules.allowHint) {
+      setStatus('Hints are disabled on Hard.', 'warn');
+      return;
+    }
     if (state.gameOver) return;
     const pair = findHintPair();
     if (!pair) {
       clearHints();
       render();
-      setStatus('No free matching pair right now. Shuffle should reopen the board.', 'bad');
+      setStatus('No free matching pair right now.', 'bad');
       return;
     }
     hintIds = pair;
@@ -1118,17 +1307,38 @@
   function shuffleRemaining() {
     if (state.gameOver) return;
     clearHints();
-    const ids = state.tiles.filter(t => t.active).map(t => t.id);
-    if (ids.length < 2) return;
-
-    const faces = makeSolvableFaces(ids);
-    for (const tile of state.tiles) {
-      if (tile.active) tile.face = faces[tile.id];
+    const rules = rulesForDifficulty();
+    if (shufflesRemaining() <= 0) {
+      setStatus('No shuffles remaining.', 'warn');
+      return;
     }
-    state.selectedId = null;
-    state.moveHistory = [];
+
+    const activeTiles = state.tiles.filter(t => t.active);
+    if (activeTiles.length < 2) return;
+
+    state.shufflesUsed += 1;
+
+    if (rules.safeShuffle) {
+      const ids = activeTiles.map(t => t.id);
+      const faces = makeSolvableFaces(ids);
+      for (const tile of activeTiles) tile.face = faces[tile.id];
+      state.selectedId = null;
+      state.moveHistory = [];
+      render();
+      setStatus(`Remaining tiles were rebuilt into a solvable layout. ${shuffleSummary()}.`, 'good');
+    } else {
+      const faces = shuffle(activeTiles.map(t => t.face));
+      activeTiles.forEach((tile, index) => {
+        tile.face = faces[index];
+      });
+      state.selectedId = null;
+      state.moveHistory = [];
+      render();
+      setStatus(`Risky shuffle used. The board may still trap you. ${shuffleSummary()}.`, 'warn');
+    }
+
     render();
-    setStatus('Remaining tiles were rebuilt into a solvable layout. Undo history was cleared.', 'good');
+    evaluateBoardState();
     saveState();
   }
 
@@ -1319,7 +1529,14 @@
     });
 
     document.querySelectorAll('[data-size]').forEach(btn => {
-      btn.addEventListener('click', () => startNewGame(btn.dataset.size));
+      btn.addEventListener('click', () => startNewGame(btn.dataset.size, selectedDifficulty));
+    });
+
+    document.querySelectorAll('[data-difficulty]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedDifficulty = btn.dataset.difficulty;
+        updateDifficultySelectionUi();
+      });
     });
 
     window.addEventListener('resize', () => {
@@ -1335,19 +1552,22 @@
   function bootstrap() {
     state = loadState();
     if (!state) {
-      state = makeFreshState('classic');
+      state = makeFreshState('classic', selectedDifficulty);
       render();
       fitBoard();
       openStartOverlay();
-      setStatus('Pick a board size to start a new game.', '');
+      setStatus('Pick a board size and difficulty to start a new game.', '');
     } else {
+      selectedDifficulty = state.difficulty || 'normal';
       render();
       if (!state.fittedOnce) {
         fitBoard();
       } else {
         applyTransform();
       }
+      evaluateBoardState();
     }
+    updateDifficultySelectionUi();
     beginTimer();
     initPointerControls();
     wireButtons();
